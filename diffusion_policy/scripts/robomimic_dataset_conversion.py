@@ -5,7 +5,12 @@ if __name__ == "__main__":
 
     ROOT_DIR = str(pathlib.Path(__file__).parent.parent.parent)
     sys.path.append(ROOT_DIR)
+import sys
+import os
+import pathlib
 
+ROOT_DIR = "/home/xxslab/Developer/diffusion_policy"
+sys.path.append(ROOT_DIR)
 import multiprocessing
 import os
 import shutil

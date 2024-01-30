@@ -44,14 +44,16 @@ class RobomimicReplayImageDataset(BaseImageDataset):
             use_legacy_normalizer=False,
             use_cache=False,
             seed=42,
-            val_ratio=0.0
+            val_ratio=0.0,
+            n_demo=100
         ):
+        self.n_demo = n_demo
         rotation_transformer = RotationTransformer(
             from_rep='axis_angle', to_rep=rotation_rep)
 
         replay_buffer = None
         if use_cache:
-            cache_zarr_path = dataset_path + '.zarr.zip'
+            cache_zarr_path = dataset_path + f'.{n_demo}.' + '.zarr.zip'
             cache_lock_path = cache_zarr_path + '.lock'
             print('Acquiring lock on cache.')
             with FileLock(cache_lock_path):
@@ -65,7 +67,8 @@ class RobomimicReplayImageDataset(BaseImageDataset):
                             shape_meta=shape_meta, 
                             dataset_path=dataset_path, 
                             abs_action=abs_action, 
-                            rotation_transformer=rotation_transformer)
+                            rotation_transformer=rotation_transformer,
+                            n_demo=n_demo)
                         print('Saving cache to disk.')
                         with zarr.ZipStore(cache_zarr_path) as zip_store:
                             replay_buffer.save_to_store(
@@ -86,7 +89,8 @@ class RobomimicReplayImageDataset(BaseImageDataset):
                 shape_meta=shape_meta, 
                 dataset_path=dataset_path, 
                 abs_action=abs_action, 
-                rotation_transformer=rotation_transformer)
+                rotation_transformer=rotation_transformer,
+                n_demo=n_demo)
 
         rgb_keys = list()
         lowdim_keys = list()
@@ -244,7 +248,7 @@ def _convert_actions(raw_actions, abs_action, rotation_transformer):
 
 
 def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, rotation_transformer, 
-        n_workers=None, max_inflight_tasks=None):
+        n_workers=None, max_inflight_tasks=None, n_demo=100):
     if n_workers is None:
         n_workers = multiprocessing.cpu_count()
     if max_inflight_tasks is None:
@@ -272,7 +276,7 @@ def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, ro
         demos = file['data']
         episode_ends = list()
         prev_end = 0
-        for i in range(len(demos)):
+        for i in range(n_demo):
             demo = demos[f'demo_{i}']
             episode_length = demo['actions'].shape[0]
             episode_end = prev_end + episode_length
@@ -289,7 +293,7 @@ def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, ro
             if key == 'action':
                 data_key = 'actions'
             this_data = list()
-            for i in range(len(demos)):
+            for i in range(n_demo):
                 demo = demos[f'demo_{i}']
                 this_data.append(demo[data_key][:].astype(np.float32))
             this_data = np.concatenate(this_data, axis=0)
@@ -336,7 +340,7 @@ def _convert_robomimic_to_replay(store, shape_meta, dataset_path, abs_action, ro
                         compressor=this_compressor,
                         dtype=np.uint8
                     )
-                    for episode_idx in range(len(demos)):
+                    for episode_idx in range(n_demo):
                         demo = demos[f'demo_{episode_idx}']
                         hdf5_arr = demo['obs'][key]
                         for hdf5_idx in range(hdf5_arr.shape[0]):

@@ -23,8 +23,7 @@ import shutil
 from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
 from diffusion_policy.workspace.base_workspace import BaseWorkspace
 from diffusion_policy.policy.bet_lowdim_policy import BETLowdimPolicy
-from diffusion_policy.dataset.base_dataset import BaseLowdimDataset
-from diffusion_policy.env_runner.base_lowdim_runner import BaseLowdimRunner
+from diffusion_policy.env_runner.base_image_runner import BaseImageRunner
 from diffusion_policy.common.checkpoint_util import TopKCheckpointManager
 from diffusion_policy.model.common.normalizer import (
     LinearNormalizer, 
@@ -32,7 +31,7 @@ from diffusion_policy.model.common.normalizer import (
 )
 from diffusion_policy.common.json_logger import JsonLogger
 from diffusers.training_utils import EMAModel
-
+from diffusion_policy.dataset.base_dataset import BaseImageDataset
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 
 # %%
@@ -71,9 +70,9 @@ class TrainBETLowdimWorkspace(BaseWorkspace):
                 self.load_checkpoint(path=lastest_ckpt_path)
 
         # configure dataset
-        dataset: BaseLowdimDataset
+        dataset: BaseImageDataset
         dataset = hydra.utils.instantiate(cfg.task.dataset)
-        assert isinstance(dataset, BaseLowdimDataset)
+        assert isinstance(dataset, BaseImageDataset)
         train_dataloader = DataLoader(dataset, **cfg.dataloader)
 
         # configure validation dataset
@@ -94,14 +93,14 @@ class TrainBETLowdimWorkspace(BaseWorkspace):
         # fit action_ae (K-Means)
         self.policy.fit_action_ae(
                 normalizer['action'].normalize(
-                    dataset.get_all_actions()))
+                    torch.tensor(dataset.replay_buffer['action'])))
 
         # configure env runner
-        env_runner: BaseLowdimRunner
+        env_runner: BaseImageRunner
         env_runner = hydra.utils.instantiate(
             cfg.task.env_runner,
             output_dir=self.output_dir)
-        assert isinstance(env_runner, BaseLowdimRunner)
+        assert isinstance(env_runner, BaseImageRunner)
 
         # configure logging
         wandb_run = wandb.init(

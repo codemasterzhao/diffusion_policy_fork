@@ -203,8 +203,8 @@ class RobomimicLowdimRunner(BaseLowdimRunner):
             env_prefixs.append('test/')
             env_init_fn_dills.append(dill.dumps(init_fn))
         
-        env = AsyncVectorEnv(env_fns)
-        # env = SyncVectorEnv(env_fns)
+        # env = AsyncVectorEnv(env_fns)
+        env = SyncVectorEnv(env_fns)
 
         self.env_meta = env_meta
         self.env = env
