@@ -101,7 +101,7 @@ task:
   abs_action: false
   dataset:
     _target_: diffusion_policy.dataset.robomimic_replay_image_dataset.RobomimicReplayImageDataset
-    n_demo: 50
+    n_demo: 1000
     abs_action: false
     dataset_path: /home/xxslab/Downloads/mug_cleanup_d1.hdf5
     horizon: 10
